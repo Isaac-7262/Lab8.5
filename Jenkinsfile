@@ -24,7 +24,7 @@ pipeline {
         stage('Run Robot Tests') {
             steps {
                 sh '''
-                robot --outputdir results/Lab8.robot
+                robot --outputdir results tests/Lab8.robot
                 '''
             }
         }
