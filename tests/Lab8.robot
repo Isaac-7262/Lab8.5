@@ -1,20 +1,30 @@
 *** Settings ***
 Library    SeleniumLibrary
+Documentation    UAT automation using Robot Framework running in Jenkins container
+
+*** Variables ***
+${URL}        https://computing.kku.ac.th
+${BROWSER}    headlesschrome
 
 *** Test Cases ***
-Open KKU Website
-    Open Browser To Login Page
-    Sleep    3s
+Open KKU Website Successfully
+    [Tags]    smoke    uat
+    Open Browser To Website
+    Title Should Not Be Empty
     Close Browser
 
 *** Keywords ***
-Open Browser To Login Page
-    ${chrome_options}=    Evaluate
+Open Browser To Website
+    ${options}=    Evaluate
     ...    sys.modules['selenium.webdriver'].ChromeOptions()
     ...    sys
-    Call Method    ${chrome_options}    add_argument    --no-sandbox
-    Call Method    ${chrome_options}    add_argument    --disable-dev-shm-usage
-    Call Method    ${chrome_options}    add_argument    --headless
+    Call Method    ${options}    add_argument    --no-sandbox
+    Call Method    ${options}    add_argument    --disable-dev-shm-usage
+    Call Method    ${options}    add_argument    --headless
 
-    Create Webdriver    Chrome    options=${chrome_options}
-    Go To    https://computing.kku.ac.th
+    Create Webdriver    Chrome    options=${options}
+    Go To    ${URL}
+
+Title Should Not Be Empty
+    ${title}=    Get Title
+    Should Not Be Empty    ${title}

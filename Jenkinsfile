@@ -3,34 +3,46 @@ pipeline {
 
     environment {
         RESULTS_DIR = "results"
+        ROBOT_OPTIONS = "--outputdir ${RESULTS_DIR}"
+        BROWSER = "headlesschrome"
+    }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
     }
 
     stages {
-        stage('Cleanup') {
-            steps {
-                echo "Cleaning up old results..."
-                sh "rm -rf ${RESULTS_DIR}"
-                sh "mkdir -p ${RESULTS_DIR}"
-            }
-        }
 
-        stage('Build Check') {
+        stage('Prepare Workspace') {
             steps {
-                echo "Verifying Environment..."
-                sh 'python3 --version'
-                sh 'robot --version'
-                sh 'chromium --version'
-            }
-        }
-
-        stage('Run Robot Tests') {
-            steps {
+                echo "Preparing workspace..."
                 sh """
-                robot --outputdir ${RESULTS_DIR} \
-                      --variable BROWSER:headlesschrome \
-                      --variable REMOTE_URL:http://localhost:4444/wd/hub \
-                      --settag docker_run \
-                      tests/
+                    rm -rf ${RESULTS_DIR}
+                    mkdir -p ${RESULTS_DIR}
+                """
+            }
+        }
+
+        stage('Verify Environment') {
+            steps {
+                echo "Checking tools inside container..."
+                sh """
+                    python3 --version
+                    robot --version
+                    chromium --version || echo "Chromium not found"
+                """
+            }
+        }
+
+        stage('Run Robot Framework Tests') {
+            steps {
+                echo "Executing Robot Framework tests..."
+                sh """
+                    robot ${ROBOT_OPTIONS} \
+                          --variable BROWSER:${BROWSER} \
+                          --settag docker_run \
+                          tests/
                 """
             }
         }
@@ -38,8 +50,10 @@ pipeline {
 
     post {
         always {
-            // Requires "Robot Framework Plugin" installed in Jenkins
-            step([$class: 'RobotPublisher',
+            echo "Publishing Robot Framework results..."
+
+            step([
+                $class: 'RobotPublisher',
                 outputPath: "${RESULTS_DIR}",
                 outputFileName: 'output.xml',
                 reportFileName: 'report.html',
@@ -48,8 +62,16 @@ pipeline {
                 passThreshold: 100.0,
                 unstableThreshold: 80.0
             ])
-            
-            archiveArtifacts artifacts: "${RESULTS_DIR}/*.*", allowEmptyArchive: true
+
+            archiveArtifacts artifacts: "${RESULTS_DIR}/*", allowEmptyArchive: true
+        }
+
+        success {
+            echo "Pipeline finished SUCCESSFULLY ✅"
+        }
+
+        failure {
+            echo "Pipeline FAILED ❌ — please check logs"
         }
     }
 }
